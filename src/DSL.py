@@ -8,7 +8,8 @@ _lexerLexer = Lexer.Lexer([
     Lexer.Rule("identifier", "[_a-zA-Z][_a-zA-Z0-9]*"),
     Lexer.Rule("sqString", "'[^'\\\\]*(\\\\.[^'\\\\]*)*'"),
     Lexer.Rule("dqString", "\"[^\"\\\\]*(\\\\.[^\"\\\\]*)*\""),
-])
+    Lexer.Rule("comment", "/\\*[^\\*]*(\\*+[^/\\*][^\\*]*)*\\*+/")
+], ignore=["comment"])
 _lexerParser = Parser.Parser("LexRules", [
     Parser.Rule("LexRules", ["rules"]),
     Parser.Rule("rules", []),
@@ -26,26 +27,43 @@ _lexerParser = Parser.Parser("LexRules", [
 _parserLexer = Lexer.Lexer([
     Lexer.Rule("$", "$", isRegex=False),
     Lexer.Rule("|", "|", isRegex=False),
+    Lexer.Rule("(", "(", isRegex=False),
+    Lexer.Rule(")", ")", isRegex=False),
+    Lexer.Rule("$", "$", isRegex=False),
+    Lexer.Rule("+", "+", isRegex=False),
+    Lexer.Rule("*", "*", isRegex=False),
+    Lexer.Rule("?", "?", isRegex=False),
     Lexer.Rule("::=", "::=", isRegex=False),
     Lexer.Rule("configType", "%(ignore|expandSingle|expand)"),
     Lexer.Rule("identifier", "[_a-zA-Z][_a-zA-Z0-9]*"),
     Lexer.Rule("sqString", "'[^'\\\\]*(\\\\.[^'\\\\]*)*'"),
-])
-_parserParser = Parser.Parser("ParseRules", [
-    Parser.Rule("ParseRules", ["rules"]),
-    Parser.Rule("rules", []),
-    Parser.Rule("rules", ["rule", "rules"]),
-    Parser.Rule("rule", ["identifier", "::=", "alternates"]),
-    Parser.Rule("rule", ["configType", "::=", "rhsItems"]),
-    Parser.Rule("alternates", ["alternate"]),
-    Parser.Rule("alternates", ["alternate", "|", "alternates"]),
-    Parser.Rule("alternate", ["$"]),
-    Parser.Rule("alternate", ["rhsItems"]),
-    Parser.Rule("rhsItems", ["rhsItem"]),
-    Parser.Rule("rhsItems", ["rhsItem", "rhsItems"]),
-    Parser.Rule("rhsItem", ["identifier"]),
-    Parser.Rule("rhsItem", ["sqString"]),
-], expand=["rules", "rhsItems", "rhsItem", "alternates"], ignore=["::=", "|", "$"])
+    Lexer.Rule("comment", "/\\*[^\\*]*(\\*+[^/\\*][^\\*]*)*\\*+/")
+], ignore=["comment"])
+_parserParser = Parser.Parser('ParseRules', [
+    Parser.Rule('ParseRules', ['rules']),
+    Parser.Rule('rules', []),
+    Parser.Rule('rules', ['rule', 'rules']),
+    Parser.Rule('rule', ['identifier', '::=', 'alternates']),
+    Parser.Rule('rule', ['configType', '::=', 'simpleItems']),
+    Parser.Rule('alternates', ['alternate']),
+    Parser.Rule('alternates', ['alternate', '|', 'alternates']),
+    Parser.Rule('alternate', ['$']),
+    Parser.Rule('alternate', ['rhsItems']),
+    Parser.Rule('rhsItems', ['rhsItem']),
+    Parser.Rule('rhsItems', ['rhsItem', 'rhsItems']),
+    Parser.Rule('rhsItem', ['itemValue', 'decorator']),
+    Parser.Rule('itemValue', ['identifier']),
+    Parser.Rule('itemValue', ['sqString']),
+    Parser.Rule('itemValue', ['(', 'alternates', ')']),
+    Parser.Rule('decorator', []),
+    Parser.Rule('decorator', ['?']),
+    Parser.Rule('decorator', ['+']),
+    Parser.Rule('decorator', ['*']),
+    Parser.Rule('simpleItems', ['simpleItem']),
+    Parser.Rule('simpleItems', ['simpleItem', 'simpleItems']),
+    Parser.Rule('simpleItem', ['identifier']),
+    Parser.Rule('simpleItem', ['sqString'])
+], expand=['rules', 'rhsItems', 'alternates', 'decorator', 'simpleItem', 'simpleItems'], ignore=['::=', '|', '$', '(', ')'])
 
 def escape(string):
     ret, inEscape = "", False
@@ -82,61 +100,8 @@ def makeLexer(config):
 
 def makeParser(config, start=None):
 
-    tokens = _parserLexer.parse(config)
-    parserRules = _parserParser.parse(tokens)
-
-    def _escape(node):
-        if node.name == 'identifier':
-            return node.value
-        else:
-            return escape(node.value)
-
-    rules = []
-    extraConfig = {}
-    for rule in parserRules.child:
-        if rule.child[0].name == 'configType':
-            configType = rule.child[0].value[1:]
-            configValue = list(map(_escape, rule.child[1:]))
-            extraConfig[configType] = configValue
-        else:
-            lhs = rule.child[0].value
-            for alternate in rule.child[1:]:
-                rhs = list(map(_escape, alternate.child))
-                nrule = Parser.Rule(lhs, rhs)
-                rules.append(nrule)
-
-    if start is None and len(rules) > 0:
-        start = rules[0].lhs
-    return Parser.Parser(start, rules, **extraConfig)
-
-_extparserLexer = makeLexer(r"""
-    %keys ::= '$' '|' '::=' '(' ')' '*' '+' '?'
-    identifier ::= "[_a-zA-Z][_a-zA-Z0-9]*"
-    configType ::= "%(ignore|expandSingle|expand)"
-    sqString ::= "'[^'\\\\]*(\\\\.[^'\\\\]*)*'"
-    comment ::= "/\\*[^\\*]*(\\*+[^/\\*][^\\*]*)*\\*+/"
-    %ignore ::= comment
-""")
-_extparserParser = makeParser(r"""
-    ExtParseRules ::= rules
-    rules ::= rule rules | $
-    rule ::= identifier '::=' alternates | configType '::=' simpleItems
-    alternates ::= alternate | alternate '|' alternates
-    alternate ::= '$' | rhsItems
-    rhsItems ::= rhsItem | rhsItem rhsItems
-    rhsItem ::= itemValue decorator
-    itemValue ::= identifier | sqString | '(' alternates ')'
-    decorator ::= '?' | '+' | '*' | $
-    simpleItems ::= simpleItem | simpleItem simpleItems
-    simpleItem ::= identifier | sqString
-    %expand ::= rules rhsItems alternates decorator simpleItem simpleItems
-    %ignore ::= '::=' '|' '$' '(' ')'
-""")
-
-def makeExtparser(config, start=None):
-
     expand = []
-    prefix = "_extparser_"
+    prefix = "_parser_"
     def allocName():
         expand.append(prefix + str(len(expand)))
         return expand[-1]
@@ -181,8 +146,8 @@ def makeExtparser(config, start=None):
 
     rules = []
     extraConfig = {}
-    tokens = _extparserLexer.parse(config)
-    tree = _extparserParser.parse(tokens)
+    tokens = _parserLexer.parse(config)
+    tree = _parserParser.parse(tokens)
 
     for rule in tree.child:
         if rule.child[0].name == 'configType':
