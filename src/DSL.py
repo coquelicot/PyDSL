@@ -101,6 +101,9 @@ def makeLexer(config):
 def makeParser(config, start=None):
 
     expand = []
+    rules = []
+    extraConfig = {}
+
     prefix = "_parser_"
     def allocName():
         expand.append(prefix + str(len(expand)))
@@ -144,11 +147,8 @@ def makeParser(config, start=None):
             getRule(node, lhs)
         return lhs
 
-    rules = []
-    extraConfig = {}
     tokens = _parserLexer.parse(config)
     tree = _parserParser.parse(tokens)
-
     for rule in tree.child:
         if rule.child[0].name == 'configType':
             objList = extraConfig.setdefault(rule.child[0].value[1:], [])
