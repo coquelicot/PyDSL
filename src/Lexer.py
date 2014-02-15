@@ -1,4 +1,5 @@
 import Parser
+import ast
 
 class Token:
 
@@ -159,6 +160,13 @@ class NFA:
 # generate by makeExtparser :)
 _parser = Parser.Parser('expr', [Parser.Rule('_extparser_0', ['|', 'concat_expr']), Parser.Rule('_extparser_1', []), Parser.Rule('_extparser_1', ['_extparser_0', '_extparser_1']), Parser.Rule('expr', ['concat_expr', '_extparser_1']), Parser.Rule('_extparser_2', ['decoTerm', '_extparser_2']), Parser.Rule('_extparser_2', ['decoTerm']), Parser.Rule('concat_expr', ['_extparser_2']), Parser.Rule('_extparser_3', []), Parser.Rule('_extparser_3', ['decorator', '_extparser_3']), Parser.Rule('decoTerm', ['term', '_extparser_3']), Parser.Rule('term', ['char']), Parser.Rule('term', ['escaped_char']), Parser.Rule('term', ['(', 'expr', ')']), Parser.Rule('term', ['[', 'expr_set', ']']), Parser.Rule('term', ['.']), Parser.Rule('_extparser_4', []), Parser.Rule('_extparser_4', ['^']), Parser.Rule('_extparser_5', []), Parser.Rule('_extparser_5', ['expr_set_item', '_extparser_5']), Parser.Rule('expr_set', ['_extparser_4', '_extparser_5']), Parser.Rule('expr_set_item', ['expr_set_char']), Parser.Rule('expr_set_item', ['expr_set_range']), Parser.Rule('expr_set_range', ['expr_set_char', '-', 'expr_set_char']), Parser.Rule('escaped_char', ['\\', 'char']), Parser.Rule('escaped_char', ['\\', 'special_char']), Parser.Rule('special_char', ['^']), Parser.Rule('special_char', ['[']), Parser.Rule('special_char', [']']), Parser.Rule('special_char', ['(']), Parser.Rule('special_char', [')']), Parser.Rule('special_char', ['+']), Parser.Rule('special_char', ['*']), Parser.Rule('special_char', ['?']), Parser.Rule('special_char', ['-']), Parser.Rule('special_char', ['$']), Parser.Rule('special_char', ['.']), Parser.Rule('special_char', ['\\']), Parser.Rule('special_char', ['|']), Parser.Rule('expr_set_char', ['char']), Parser.Rule('expr_set_char', ['escaped_char']), Parser.Rule('decorator', ['+']), Parser.Rule('decorator', ['*']), Parser.Rule('decorator', ['?'])], [], ['expr_set_item', 'special_char', 'expr_set_char', 'decorator', '_extparser_0', '_extparser_1', '_extparser_2', '_extparser_3', '_extparser_4', '_extparser_5'], [])
 
+NATIVE_ESCAPE_SET = "abfnrtv"
+def getEscapedChar(char):
+    if char in NATIVE_ESCAPE_SET:
+        return ast.literal_eval('"\\{0}"'.format(char))
+    else:
+        return char
+
 def buildNFA(string, reverse=False, rawString=False):
 
     def conv(ch):
@@ -172,7 +180,7 @@ def buildNFA(string, reverse=False, rawString=False):
         if node.name == 'char':
             return node.value
         else:
-            return node.child[1].value
+            return getEscapedChar(node.child[1].value)
 
     def toNFA(tree):
 

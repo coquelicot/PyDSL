@@ -17,12 +17,14 @@ _lexerParser = Parser.Parser("LexRules", [
     Parser.Rule("rule", ["identifier", "::=", "sqString"]),
     Parser.Rule("rule", ["identifier", "::=", "dqString"]),
     Parser.Rule("rule", ["%keys", "::=", "keys"]),
-    Parser.Rule("rule", ["%ignore", "::=", "identifiers"]),
+    Parser.Rule("rule", ["%ignore", "::=", "elements"]),
     Parser.Rule("keys", ["sqString"]),
     Parser.Rule("keys", ["sqString", "keys"]),
-    Parser.Rule("identifiers", ["identifier"]),
-    Parser.Rule("identifiers", ["identifier", "identifiers"]),
-], expand=["rules", "keys", "identifiers"], ignore=["::="])
+    Parser.Rule("elements", ["element"]),
+    Parser.Rule("elements", ["element", "elements"]),
+    Parser.Rule("element", ["identifier"]),
+    Parser.Rule("element", ["sqString"]),
+], expand=["rules", "keys", "element", "elements"], ignore=["::="])
 
 _parserLexer = Lexer.Lexer([
     Lexer.Rule("$", "$", isRegex=False),
@@ -69,7 +71,7 @@ def escape(string):
     ret, inEscape = "", False
     for ch in string[1:-1]:
         if inEscape or ch != "\\":
-            ret += ch
+            ret += Lexer.getEscapedChar(ch)
             inEscape = False
         else:
             inEscape = True
@@ -90,7 +92,10 @@ def makeLexer(config):
                 keys.append(Lexer.Rule(key, key, isRegex=False))
         elif rule.child[0].name == '%ignore':
             for token in rule.child[1:]:
-                ignore.append(token.value)
+                if token.name == 'identifier':
+                    ignore.append(token.value)
+                else:
+                    ignore.append(escape(token.value))
         else:
             name = rule.child[0].value
             value = escape(rule.child[1].value)
