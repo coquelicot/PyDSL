@@ -45,15 +45,21 @@ import DSL
 import functools
 
 lexer = DSL.makeLexer(r"""
+    /* It's okay to put comment here */
     %keys ::= '+' '*' '(' ')'
+    /* Be careful!! backslash will be escaped!! */
     number ::= "[0-9]+(\\.[0-9]+)?"
 """)
 parser = DSL.makeParser(r"""
+    /* You may use brace, *, +, ? just like regex. */
     exprAdd ::= exprMul ('+' exprMul)*
     exprMul ::= term ('*' term)*
     term ::= '(' exprAdd ')' | number
+    /* Remove them from AST */
     %ignore ::= '(' ')' '+' '*'
+    /* Expand the node if it has only one child */
     %expandSingle ::= exprAdd exprMul
+    /* Always expand the node */
     %expand ::= term
 """)
 
@@ -83,7 +89,7 @@ lexer = DSL.makeLexer(r"""
     number ::= "[0-9]+(\\.[0-9])?"
 """)
 parser = DSL.makeParser(r"""
-    object ::= '{' (kvPair (',' kvPair)*)? '}'
+    object ::= '{' (kvPair (',' kvPair)*)? '}' /* Nested brace!! */
     kvPair ::= string ':' value
     array ::= '[' (value (',' value)*)? ']'
     value ::= string | number | object | array | 'true' | 'false' | 'null'
