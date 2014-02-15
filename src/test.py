@@ -19,7 +19,7 @@ lexerParserConfig = r"""
     LexRules ::= rule*
     rule ::= identifier '::=' (sqString | dqString)
            | '%keys' '::=' sqString+
-           | '%ignore' '::=' identifier+
+           | '%ignore' '::=' (identifier | sqString)+
     %ignore ::= '::='
 """
 lexerParser = makeParser(lexerParserConfig)
