@@ -6,7 +6,7 @@ A runtime DSL parser generator for python.
 How to
 ====
 
-1. Define Tokens.
+* Define Tokens.
 ```python
 lexRules = r"""
     identifier ::= "[_a-zA-Z][_a-zA-Z0-9]+"
@@ -14,8 +14,7 @@ lexRules = r"""
     operator ::= "[\\+\\-\\*/]"
 """
 ```
-
-2. Define Rules.
+* Define Rules.
 ```python
 parseRules = r"""
     expression ::= operand (operator operand)*
@@ -23,15 +22,13 @@ parseRules = r"""
     %expand ::= operand
 """
 ```
-
-3. Create Lexer and Parser
+* Create Lexer and Parser
 ```python
 import DSL
 lexer = DSL.makeLexer(lexRules)
 parser = DSL.makeParser(parseRules)
 ```
-
-4. Use it!!
+* Use it!!
 ```python
 data = open("source", "r").read()
 tokens = lexer.parse(data)
