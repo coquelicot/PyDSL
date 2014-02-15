@@ -36,8 +36,10 @@ ast = parser.parse(tokens)
 # do things with ast
 ```
 
-Example
+Examples
 ====
+
+A simple calculator.
 ```python
 import DSL
 import functools
@@ -69,4 +71,43 @@ data = "1+(2.3+4)*5"
 tokens = lexer.parse(data)
 ast = parser.parse(tokens)
 print(evaluateAST(ast))
+```
+
+Json-like parser.
+```python
+import DSL
+
+lexer = DSL.makeLexer(r"""
+    %keys ::= '{' '}' '[' ']' ':' ',' 'true' 'false' 'null'
+    string ::= "\"[^\"\\\\]*(\\\\.[^\"\\\\]*)*\""
+    number ::= "[0-9]+(\\.[0-9])?"
+""")
+parser = DSL.makeParser(r"""
+    object ::= '{' (kvPair (',' kvPair)*)? '}'
+    kvPair ::= string ':' value
+    array ::= '[' (value (',' value)*)? ']'
+    value ::= string | number | object | array | 'true' | 'false' | 'null'
+    %ignore ::= '{' '}' '[' ']' ',' ':'
+    %expand ::= value
+""")
+
+data = r"""
+{
+    "key1" : {
+        "key2" : [1, 2, 3, 4],
+        "key3" : [
+            {},
+            { "key4" : "value" }
+        ]
+    },
+    "key5" : null,
+    "key6" : [
+        [1, 2, 3],
+        [4.4, 5.5, 6.6],
+        ["string", 8, 9.9],
+        true
+    ]
+}
+"""
+print(parser.parse(lexer.parse(data)))
 ```
