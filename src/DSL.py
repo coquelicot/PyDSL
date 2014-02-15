@@ -70,9 +70,11 @@ _parserParser = Parser.Parser('ParseRules', [
 def escape(string):
     ret, inEscape = "", False
     for ch in string[1:-1]:
-        if inEscape or ch != "\\":
+        if inEscape:
             ret += Lexer.getEscapedChar(ch)
             inEscape = False
+        elif ch != "\\":
+            ret += ch
         else:
             inEscape = True
     return ret

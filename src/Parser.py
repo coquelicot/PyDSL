@@ -87,8 +87,6 @@ class Parser:
                 self.rules[rule.lhs] = []
             self.rules[rule.lhs].append(rule)
 
-	# TODO: should show some warning when start is expandable.
-
     def __repr__(self):
         return "{0}({1}, {2}, {3}, {4}, {5})".format(
             self.__class__.__qualname__,
@@ -124,7 +122,11 @@ class Parser:
 
         for state in self.chart[len(tokens)]:
             if state.isComplete() and state.rule.lhs == Parser.INIT_SYM:
-                return self.flatten(state.node.child[0])[0]
+                result = self.flatten(state.node.child[0])
+                if len(result) != 1:
+                    raise RuntimeError("The simplified AST is not a tree.")
+                else:
+                    return result[0]
         raise RuntimeError("Can't parse token stream.")
 
     def add(self, state, pos):
