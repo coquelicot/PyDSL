@@ -87,8 +87,7 @@ class Parser:
                 self.rules[rule.lhs] = []
             self.rules[rule.lhs].append(rule)
 
-        if start in expand or start in expandSingle:
-            raise ValueError("Should never expand starting symbol")
+	# TODO: should show some warning when start is expandable.
 
     def __repr__(self):
         return "{0}({1}, {2}, {3}, {4}, {5})".format(
