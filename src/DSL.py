@@ -5,10 +5,11 @@ _lexerLexer = Lexer.Lexer([
     Lexer.Rule("::=", "::=", isRegex=False),
     Lexer.Rule("%keys", "%keys", isRegex=False),
     Lexer.Rule("%ignore", "%ignore", isRegex=False),
+    Lexer.Rule("comment", "/\\*[^\\*]*(\\*+[^/\\*][^\\*]*)*\\*+/"),
     Lexer.Rule("identifier", "[_a-zA-Z][_a-zA-Z0-9]*"),
-    Lexer.Rule("sqString", "'[^'\\\\]*(\\\\.[^'\\\\]*)*'"),
+    Lexer.Rule("sqString", "'[^']*'"),
     Lexer.Rule("dqString", "\"[^\"\\\\]*(\\\\.[^\"\\\\]*)*\""),
-    Lexer.Rule("comment", "/\\*[^\\*]*(\\*+[^/\\*][^\\*]*)*\\*+/")
+    Lexer.Rule("reString", "/[^/\\\\]*(\\\\.[^/\\\\]*)*/"),
 ], ignore=["comment"])
 _lexerParser = Parser.Parser("LexRules", [
     Parser.Rule("LexRules", ["rules"]),
@@ -16,15 +17,18 @@ _lexerParser = Parser.Parser("LexRules", [
     Parser.Rule("rules", ["rule", "rules"]),
     Parser.Rule("rule", ["identifier", "::=", "sqString"]),
     Parser.Rule("rule", ["identifier", "::=", "dqString"]),
+    Parser.Rule("rule", ["identifier", "::=", "reString"]),
     Parser.Rule("rule", ["%keys", "::=", "keys"]),
     Parser.Rule("rule", ["%ignore", "::=", "elements"]),
-    Parser.Rule("keys", ["sqString"]),
-    Parser.Rule("keys", ["sqString", "keys"]),
+    Parser.Rule("keys", ["key"]),
+    Parser.Rule("keys", ["key", "keys"]),
+    Parser.Rule("key", ["sqString"]),
+    Parser.Rule("key", ["dqString"]),
     Parser.Rule("elements", ["element"]),
     Parser.Rule("elements", ["element", "elements"]),
     Parser.Rule("element", ["identifier"]),
     Parser.Rule("element", ["sqString"]),
-], expand=["rules", "keys", "element", "elements"], ignore=["::="])
+], expand=["rules", "keys", "key", "element", "elements"], ignore=["::="])
 
 _parserLexer = Lexer.Lexer([
     Lexer.Rule("$", "$", isRegex=False),
@@ -38,7 +42,8 @@ _parserLexer = Lexer.Lexer([
     Lexer.Rule("::=", "::=", isRegex=False),
     Lexer.Rule("configType", "%(ignore|expandSingle|expand)"),
     Lexer.Rule("identifier", "[_a-zA-Z][_a-zA-Z0-9]*"),
-    Lexer.Rule("sqString", "'[^'\\\\]*(\\\\.[^'\\\\]*)*'"),
+    Lexer.Rule("sqString", "'[^']*'"),
+    Lexer.Rule("dqString", "\"[^\"\\\\]*(\\\\.[^\"\\\\]*)*\""),
     Lexer.Rule("comment", "/\\*[^\\*]*(\\*+[^/\\*][^\\*]*)*\\*+/")
 ], ignore=["comment"])
 _parserParser = Parser.Parser('ParseRules', [
@@ -54,8 +59,7 @@ _parserParser = Parser.Parser('ParseRules', [
     Parser.Rule('rhsItems', ['rhsItem']),
     Parser.Rule('rhsItems', ['rhsItem', 'rhsItems']),
     Parser.Rule('rhsItem', ['itemValue', 'decorator']),
-    Parser.Rule('itemValue', ['identifier']),
-    Parser.Rule('itemValue', ['sqString']),
+    Parser.Rule('itemValue', ['simpleItem']),
     Parser.Rule('itemValue', ['(', 'alternates', ')']),
     Parser.Rule('decorator', []),
     Parser.Rule('decorator', ['?']),
@@ -64,6 +68,7 @@ _parserParser = Parser.Parser('ParseRules', [
     Parser.Rule('simpleItems', ['simpleItem']),
     Parser.Rule('simpleItems', ['simpleItem', 'simpleItems']),
     Parser.Rule('simpleItem', ['identifier']),
+    Parser.Rule('simpleItem', ['dqString']),
     Parser.Rule('simpleItem', ['sqString'])
 ], expand=['rules', 'rhsItems', 'alternates', 'decorator', 'simpleItem', 'simpleItems'], ignore=['::=', '|', '$', '(', ')'])
 
@@ -100,8 +105,11 @@ def makeLexer(config):
                     ignore.append(escape(token.value))
         else:
             name = rule.child[0].value
-            value = escape(rule.child[1].value)
-            isRegex = rule.child[1].name == 'dqString'
+            if rule.child[1].name == 'dqString':
+                value = escape(rule.child[1].value)
+            elif rule.child[1].name in ['sqString', 'reString']:
+                value = rule.child[1].value[1:-1]
+            isRegex = rule.child[1].name == 'reString'
             regexs.append(Lexer.Rule(name, value, isRegex=isRegex))
     return Lexer.Lexer(keys + regexs, ignore=ignore)
 
@@ -129,8 +137,10 @@ def makeParser(config, start=None):
                 itemName = getRules(itemValue.child)
             elif firstChild.name == 'identifier':
                 itemName = firstChild.value
-            elif firstChild.name == 'sqString':
+            elif firstChild.name == 'dqString':
                 itemName = escape(firstChild.value)
+            elif firstChild.name == 'sqString':
+                itemName = firstChild.value[1:-1]
 
             if len(_node.child) > 1:
                 decorator = _node.child[1].value

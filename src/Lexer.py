@@ -63,6 +63,7 @@ class Lexer:
             elif not self.strict and string[0].isspace():
                 string = string[1:]
             else:
+                print(tokens, string)
                 raise RuntimeError("Can't parse string")
         return tokens
 

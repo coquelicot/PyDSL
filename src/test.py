@@ -7,29 +7,31 @@ from DSL import makeParser, makeLexer
 
 lexerLexerConfig = r"""
     %keys ::= '%ignore' '%keys' '::='
-    identifier ::= "[_a-zA-Z][_a-zA-Z0-9]*"
-    sqString ::= "'[^'\\\\]*(\\\\.[^'\\\\]*)*'"
-    dqString ::= "\"[^\"\\\\]*(\\\\.[^\"\\\\]*)*\""
-    comment ::= "/\\*[^\\*]*(\\*+[^/\\*][^\\*]*)*\\*+/"
+    comment ::= /\/\*[^\*]*(\*+[^\/\*][^\*]*)*\*+\//
+    identifier ::= /[_a-zA-Z][_a-zA-Z0-9]*/
+    sqString ::= /'[^']*'/
+    dqString ::= /"[^"\\]*(\\.[^"\\]*)*"/
+    reString ::= /\/[^\/\\]*(\\.[^\/\\]*)*\//
     %ignore ::= comment
 """
 lexerLexer = makeLexer(lexerLexerConfig)
 
 lexerParserConfig = r"""
     LexRules ::= rule*
-    rule ::= identifier '::=' (sqString | dqString)
-           | '%keys' '::=' sqString+
-           | '%ignore' '::=' (identifier | sqString)+
+    rule ::= identifier '::=' (sqString | dqString | reString)
+           | '%keys' '::=' (sqString | dqString)+
+           | '%ignore' '::=' (identifier | sqString | dqString)+
     %ignore ::= '::='
 """
 lexerParser = makeParser(lexerParserConfig)
 
 parserLexerConfig = r"""
     %keys ::= '$' '|' '::=' '(' ')' '*' '+' '?'
-    identifier ::= "[_a-zA-Z][_a-zA-Z0-9]*"
-    configType ::= "%(ignore|expandSingle|expand)"
-    sqString ::= "'[^'\\\\]*(\\\\.[^'\\\\]*)*'"
-    comment ::= "/\\*[^\\*]*(\\*+[^/\\*][^\\*]*)*\\*+/"
+    identifier ::= /[_a-zA-Z][_a-zA-Z0-9]*/
+    configType ::= /%(ignore|expandSingle|expand)/
+    sqString ::= /'[^']*'/
+    dqString ::= /"[^"\\]*(\\.[^"\\]*)*"/
+    comment ::= /\/\*[^\*]*(\*+[^\/\*][^\*]*)*\*+\//
     %ignore ::= comment
 """
 parserLexer = makeLexer(parserLexerConfig)
@@ -37,11 +39,13 @@ parserLexer = makeLexer(parserLexerConfig)
 parserParserConfig = r"""
     ParseRules ::= rule*
     rule ::= identifier '::=' alternate ('|' alternate)*
-           | configType '::=' (identifier | sqString)+
+           | configType '::=' simpleItem+
     alternate ::= '$' | rhsItem+
     rhsItem ::= itemValue ('?' | '+' | '*')?
-    itemValue ::= identifier | sqString | '(' alternate ('|' alternate)* ')'
+    itemValue ::= simpleItem | '(' alternate ('|' alternate)* ')'
+    simpleItem ::= identifier | dqString | sqString
     %ignore ::= '::=' '|' '$' '(' ')'
+    %expand ::= simpleItem
 """
 parserParser = makeParser(parserParserConfig)
 

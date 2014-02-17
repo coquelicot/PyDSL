@@ -9,9 +9,9 @@ How to
 * Define Tokens.
 ```python
 lexRules = r"""
-    identifier ::= "[_a-zA-Z][_a-zA-Z0-9]+"
-    number ::= "[0-9]+(\\.[0-9]+)?"
-    operator ::= "[\\+\\-\\*/]"
+    identifier ::= /[_a-zA-Z][_a-zA-Z0-9]+/
+    number ::= /[0-9]+(\.[0-9]+)?/
+    operator ::= /[\+\-\*/]/
 """
 ```
 * Define Rules.
@@ -42,39 +42,43 @@ Syntax Definition
 * Lexer DSL's lexer in Lexer DSL
 ```
 %keys ::= '%ignore' '%keys' '::='
-identifier ::= "[_a-zA-Z][_a-zA-Z0-9]*"
-sqString ::= "'[^'\\\\]*(\\\\.[^'\\\\]*)*'"
-dqString ::= "\"[^\"\\\\]*(\\\\.[^\"\\\\]*)*\""
-comment ::= "/\\*[^\\*]*(\\*+[^/\\*][^\\*]*)*\\*+/"
+comment ::= /\/\*[^\*]*(\*+[^\/\*][^\*]*)*\*+\//
+identifier ::= /[_a-zA-Z][_a-zA-Z0-9]*/
+sqString ::= /'[^']*'/
+dqString ::= /"[^"\\]*(\\.[^"\\]*)*"/
+reString ::= /\/[^\/\\]*(\\.[^\/\\]*)*\//
 %ignore ::= comment
 ```
 * Lexer DSL's parser in Parser DSL
 ```
 LexRules ::= rule*
-rule ::= identifier '::=' (sqString | dqString)
-       | '%keys' '::=' sqString+
-       | '%ignore' '::=' (identifier | sqString)+
+rule ::= identifier '::=' (sqString | dqString | reString)
+       | '%keys' '::=' (sqString | dqString)+
+       | '%ignore' '::=' (identifier | sqString | dqString)+
 %ignore ::= '::='
 ```
 
 * Parser DSL's lexer in Lexer DSL
 ```
 %keys ::= '$' '|' '::=' '(' ')' '*' '+' '?'
-identifier ::= "[_a-zA-Z][_a-zA-Z0-9]*"
-configType ::= "%(ignore|expandSingle|expand)"
-sqString ::= "'[^'\\\\]*(\\\\.[^'\\\\]*)*'"
-comment ::= "/\\*[^\\*]*(\\*+[^/\\*][^\\*]*)*\\*+/"
+identifier ::= /[_a-zA-Z][_a-zA-Z0-9]*/
+configType ::= /%(ignore|expandSingle|expand)/
+sqString ::= /'[^']*'/
+dqString ::= /"[^"\\]*(\\.[^"\\]*)*"/
+comment ::= /\/\*[^\*]*(\*+[^\/\*][^\*]*)*\*+\//
 %ignore ::= comment
 ```
 * Parser DSL's parser in Parser DSL
 ```
 ParseRules ::= rule*
 rule ::= identifier '::=' alternate ('|' alternate)*
-       | configType '::=' (identifier | sqString)+
+       | configType '::=' simpleItem+
 alternate ::= '$' | rhsItem+
 rhsItem ::= itemValue ('?' | '+' | '*')?
-itemValue ::= identifier | sqString | '(' alternate ('|' alternate)* ')'
+itemValue ::= simpleItem | '(' alternate ('|' alternate)* ')'
+simpleItem ::= identifier | dqString | sqString
 %ignore ::= '::=' '|' '$' '(' ')'
+%expand ::= simpleItem
 ```
 
 Examples
@@ -89,7 +93,7 @@ lexer = DSL.makeLexer(r"""
     /* It's okay to put comment here */
     %keys ::= '+' '*' '(' ')'
     /* Be careful!! backslash will be escaped!! */
-    number ::= "[0-9]+(\\.[0-9]+)?"
+    number ::= /[0-9]+(\.[0-9]+)?/
 """)
 parser = DSL.makeParser(r"""
     /* You may use brace, *, +, ? just like regex. */
@@ -126,8 +130,8 @@ import DSL
 
 lexer = DSL.makeLexer(r"""
     %keys ::= '{' '}' '[' ']' ':' ',' 'true' 'false' 'null'
-    string ::= "\"[^\"\\\\]*(\\\\.[^\"\\\\]*)*\""
-    number ::= "[0-9]+(\\.[0-9])?"
+    string ::= /"[^"\\]*(\\.[^"\\]*)*"/
+    number ::= /[0-9]+(\.[0-9])?/
 """)
 parser = DSL.makeParser(r"""
     object ::= '{' (kvPair (',' kvPair)*)? '}' /* Nested brace!! */
