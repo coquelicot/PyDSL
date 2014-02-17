@@ -41,40 +41,40 @@ Syntax Definition
 
 * Lexer DSL's lexer in Lexer DSL
 ```
-    %keys ::= '%ignore' '%keys' '::='
-    identifier ::= "[_a-zA-Z][_a-zA-Z0-9]*"
-    sqString ::= "'[^'\\\\]*(\\\\.[^'\\\\]*)*'"
-    dqString ::= "\"[^\"\\\\]*(\\\\.[^\"\\\\]*)*\""
-    comment ::= "/\\*[^\\*]*(\\*+[^/\\*][^\\*]*)*\\*+/"
-    %ignore ::= comment
+%keys ::= '%ignore' '%keys' '::='
+identifier ::= "[_a-zA-Z][_a-zA-Z0-9]*"
+sqString ::= "'[^'\\\\]*(\\\\.[^'\\\\]*)*'"
+dqString ::= "\"[^\"\\\\]*(\\\\.[^\"\\\\]*)*\""
+comment ::= "/\\*[^\\*]*(\\*+[^/\\*][^\\*]*)*\\*+/"
+%ignore ::= comment
 ```
 * Lexer DSL's parser in Parser DSL
 ```
-    LexRules ::= rule*
-    rule ::= identifier '::=' (sqString | dqString)
-           | '%keys' '::=' sqString+
-           | '%ignore' '::=' (identifier | sqString)+
-    %ignore ::= '::='
+LexRules ::= rule*
+rule ::= identifier '::=' (sqString | dqString)
+       | '%keys' '::=' sqString+
+       | '%ignore' '::=' (identifier | sqString)+
+%ignore ::= '::='
 ```
 
 * Parser DSL's lexer in Lexer DSL
 ```
-    %keys ::= '$' '|' '::=' '(' ')' '*' '+' '?'
-    identifier ::= "[_a-zA-Z][_a-zA-Z0-9]*"
-    configType ::= "%(ignore|expandSingle|expand)"
-    sqString ::= "'[^'\\\\]*(\\\\.[^'\\\\]*)*'"
-    comment ::= "/\\*[^\\*]*(\\*+[^/\\*][^\\*]*)*\\*+/"
-    %ignore ::= comment
+%keys ::= '$' '|' '::=' '(' ')' '*' '+' '?'
+identifier ::= "[_a-zA-Z][_a-zA-Z0-9]*"
+configType ::= "%(ignore|expandSingle|expand)"
+sqString ::= "'[^'\\\\]*(\\\\.[^'\\\\]*)*'"
+comment ::= "/\\*[^\\*]*(\\*+[^/\\*][^\\*]*)*\\*+/"
+%ignore ::= comment
 ```
 * Parser DSL's parser in Parser DSL
 ```
-    ParseRules ::= rule*
-    rule ::= identifier '::=' alternate ('|' alternate)*
-           | configType '::=' (identifier | sqString)+
-    alternate ::= '$' | rhsItem+
-    rhsItem ::= itemValue ('?' | '+' | '*')?
-    itemValue ::= identifier | sqString | '(' alternate ('|' alternate)* ')'
-    %ignore ::= '::=' '|' '$' '(' ')'
+ParseRules ::= rule*
+rule ::= identifier '::=' alternate ('|' alternate)*
+       | configType '::=' (identifier | sqString)+
+alternate ::= '$' | rhsItem+
+rhsItem ::= itemValue ('?' | '+' | '*')?
+itemValue ::= identifier | sqString | '(' alternate ('|' alternate)* ')'
+%ignore ::= '::=' '|' '$' '(' ')'
 ```
 
 Examples
