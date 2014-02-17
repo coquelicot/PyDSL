@@ -10,9 +10,9 @@ endif
 syn match dslOperator /::=\|+\|*\|?\|(\|)\||/
 syn match dslKeyword /%\(ignore\|expand\|expandSingle\|keys\)/
 syn match dslEscapedChar /\\./
+syn match dslComment "#.*$"
 
 syn region dslSqString start="'" end="'"
-syn region dslComment start="/\*" end="\*/"
 syn region dslDqString start=+"+ end=+"+ skip=+\\\\\|\\"+ contains=dslEscapedChar
 syn region dslReString start="/" end="/" skip=+\\\\\|\\"+ contains=dslEscapedChar
 

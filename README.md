@@ -1,10 +1,8 @@
-PyDSL
-=====
+# PyDSL
 
 A runtime DSL parser generator for python.
 
-How to
-====
+## How to
 
 * Define Tokens.
 ```python
@@ -36,13 +34,12 @@ ast = parser.parse(tokens)
 # do things with ast
 ```
 
-Syntax Definition
-====
+## Syntax Definition
 
 * Lexer DSL's lexer in Lexer DSL
 ```
 %keys ::= '%ignore' '%keys' '::='
-comment ::= /\/\*[^\*]*(\*+[^\/\*][^\*]*)*\*+\//
+comment ::= /#[^\n]*\n/
 identifier ::= /[_a-zA-Z][_a-zA-Z0-9]*/
 sqString ::= /'[^']*'/
 dqString ::= /"[^"\\]*(\\.[^"\\]*)*"/
@@ -65,7 +62,7 @@ identifier ::= /[_a-zA-Z][_a-zA-Z0-9]*/
 configType ::= /%(ignore|expandSingle|expand)/
 sqString ::= /'[^']*'/
 dqString ::= /"[^"\\]*(\\.[^"\\]*)*"/
-comment ::= /\/\*[^\*]*(\*+[^\/\*][^\*]*)*\*+\//
+comment ::= /#[^\n]*\n/
 %ignore ::= comment
 ```
 * Parser DSL's parser in Parser DSL
@@ -81,8 +78,7 @@ simpleItem ::= identifier | dqString | sqString
 %expand ::= simpleItem
 ```
 
-Examples
-====
+## Examples
 
 A simple calculator.
 ```python
@@ -90,21 +86,21 @@ import DSL
 import functools
 
 lexer = DSL.makeLexer(r"""
-    /* It's okay to put comment here */
+    # It's okay to put comment here
     %keys ::= '+' '*' '(' ')'
-    /* Be careful!! backslash will be escaped!! */
+    # Be careful!! backslash will be escaped!!
     number ::= /[0-9]+(\.[0-9]+)?/
 """)
 parser = DSL.makeParser(r"""
-    /* You may use brace, *, +, ? just like regex. */
+    # You may use brace, *, +, ? just like regex.
     exprAdd ::= exprMul ('+' exprMul)*
     exprMul ::= term ('*' term)*
     term ::= '(' exprAdd ')' | number
-    /* Remove them from AST */
+    # Remove them from AST
     %ignore ::= '(' ')' '+' '*'
-    /* Expand the node if it has only one child */
+    # Expand the node if it has only one child
     %expandSingle ::= exprAdd exprMul
-    /* Always expand the node */
+    # Always expand the node
     %expand ::= term
 """)
 
@@ -134,7 +130,7 @@ lexer = DSL.makeLexer(r"""
     number ::= /[0-9]+(\.[0-9])?/
 """)
 parser = DSL.makeParser(r"""
-    object ::= '{' (kvPair (',' kvPair)*)? '}' /* Nested brace!! */
+    object ::= '{' (kvPair (',' kvPair)*)? '}' # Nested brace!!
     kvPair ::= string ':' value
     array ::= '[' (value (',' value)*)? ']'
     value ::= string | number | object | array | 'true' | 'false' | 'null'

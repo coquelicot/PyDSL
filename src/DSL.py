@@ -5,7 +5,7 @@ _lexerLexer = Lexer.Lexer([
     Lexer.Rule("::=", "::=", isRegex=False),
     Lexer.Rule("%keys", "%keys", isRegex=False),
     Lexer.Rule("%ignore", "%ignore", isRegex=False),
-    Lexer.Rule("comment", "/\\*[^\\*]*(\\*+[^/\\*][^\\*]*)*\\*+/"),
+    Lexer.Rule("comment", "#[^\n]*\n"),
     Lexer.Rule("identifier", "[_a-zA-Z][_a-zA-Z0-9]*"),
     Lexer.Rule("sqString", "'[^']*'"),
     Lexer.Rule("dqString", "\"[^\"\\\\]*(\\\\.[^\"\\\\]*)*\""),
@@ -44,7 +44,7 @@ _parserLexer = Lexer.Lexer([
     Lexer.Rule("identifier", "[_a-zA-Z][_a-zA-Z0-9]*"),
     Lexer.Rule("sqString", "'[^']*'"),
     Lexer.Rule("dqString", "\"[^\"\\\\]*(\\\\.[^\"\\\\]*)*\""),
-    Lexer.Rule("comment", "/\\*[^\\*]*(\\*+[^/\\*][^\\*]*)*\\*+/")
+    Lexer.Rule("comment", "#[^\n]*\n"),
 ], ignore=["comment"])
 _parserParser = Parser.Parser('ParseRules', [
     Parser.Rule('ParseRules', ['rules']),

@@ -7,7 +7,7 @@ from DSL import makeParser, makeLexer
 
 lexerLexerConfig = r"""
     %keys ::= '%ignore' '%keys' '::='
-    comment ::= /\/\*[^\*]*(\*+[^\/\*][^\*]*)*\*+\//
+    comment ::= /#[^\n]*\n/
     identifier ::= /[_a-zA-Z][_a-zA-Z0-9]*/
     sqString ::= /'[^']*'/
     dqString ::= /"[^"\\]*(\\.[^"\\]*)*"/
@@ -31,7 +31,7 @@ parserLexerConfig = r"""
     configType ::= /%(ignore|expandSingle|expand)/
     sqString ::= /'[^']*'/
     dqString ::= /"[^"\\]*(\\.[^"\\]*)*"/
-    comment ::= /\/\*[^\*]*(\*+[^\/\*][^\*]*)*\*+\//
+    comment ::= /#[^\n]*\n/
     %ignore ::= comment
 """
 parserLexer = makeLexer(parserLexerConfig)
