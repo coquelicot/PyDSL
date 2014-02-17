@@ -34,6 +34,24 @@ ast = parser.parse(tokens)
 # do things with ast
 ```
 
+## Candy
+
+In many cases, you can use `makeDSL` instead of `makeLexer` and `makeParser`.
+
+```python
+import DSL
+dsl = DSL.makeDSL(r"""#dsl
+    identifier ::= /[_a-zA-Z][_a-zA-Z0-9]+/
+    number ::= /[0-9]+(\.[0-9]+)?/
+    operator ::= /[\+\-\*\/]/
+    expression ::= operand (operator operand)*
+    operand ::= identifier | number
+    %expand ::= operand
+"""
+#parser.parse(lexer.parse(data))
+dsl.parse(data)
+```
+
 ## Syntax Definition
 
 * Lexer DSL's lexer in Lexer DSL
@@ -77,6 +95,30 @@ simpleItem ::= identifier | dqString | sqString
 %ignore ::= '::=' '|' '$' '(' ')'
 %expand ::= simpleItem
 ```
+* DSL DSL's lexer in Lexer DDSL
+```
+%keys ::= '$' '|' '::=' '(' ')' '*' '+' '?'
+identifier ::= /[_a-zA-Z][_a-zA-Z0-9]*/
+sqString ::= /'[^']*'/
+dqString ::= /"[^"\\]*(\\.[^"\\]*)*"/
+reString ::= /\/[^\/\\]*(\\.[^\/\\]*)*\//
+configType ::= /%(ignore|expandSingle|expand)/
+comment ::= /#[^\n]*\n/
+%ignore ::= comment
+```
+* DSL DSL's parser in Parser DSL
+```
+DSLRules ::= rule*
+rule ::= identifier '::=' reString
+       | identifier '::=' alternate ('|' alternate)*
+       | configType '::=' simpleItem+
+alternate ::= '$' | rhsItem+
+rhsItem ::= itemValue ('?' | '+' | '*')?
+itemValue ::= simpleItem | '(' alternate ('|' alternate)* ')'
+simpleItem ::= identifier | dqString | sqString
+%ignore ::= '::=' '|' '$' '(' ')'
+%expand ::= simpleItem
+```
 
 ## Examples
 
@@ -90,6 +132,9 @@ lexer = DSL.makeLexer(r"""#dsl
     %keys ::= '+' '*' '(' ')'
     # Be careful!! backslash will be escaped!!
     number ::= /[0-9]+(\.[0-9]+)?/
+    comment ::= /\/\*[^\*]*(\*+[^\*\/][^\*]*)*\*+\//
+    # Remove comment from token stream.
+    %ignore ::= comment
 """)
 parser = DSL.makeParser(r"""#dsl
     # You may use brace, *, +, ? just like regex.
@@ -114,7 +159,10 @@ def evaluateAST(ast):
             func = lambda a, b: a * b
         return functools.reduce(func, map(evaluateAST, ast.child))
 
-data = "1+(2.3+4)*5"
+data = """
+    /* The result should be 32.5 */
+    1+(2.3+4)*5
+"""
 tokens = lexer.parse(data)
 ast = parser.parse(tokens)
 print(evaluateAST(ast))
@@ -124,16 +172,15 @@ Json-like parser.
 ```python
 import DSL
 
-lexer = DSL.makeLexer(r"""#dsl
-    %keys ::= '{' '}' '[' ']' ':' ',' 'true' 'false' 'null'
+jsonDSL = DSL.makeDSL(r"""#dsl
     string ::= /"[^"\\]*(\\.[^"\\]*)*"/
     number ::= /[0-9]+(\.[0-9])?/
-""")
-parser = DSL.makeParser(r"""#dsl
+
     object ::= '{' (kvPair (',' kvPair)*)? '}' # Nested brace!!
     kvPair ::= string ':' value
     array ::= '[' (value (',' value)*)? ']'
     value ::= string | number | object | array | 'true' | 'false' | 'null'
+
     %ignore ::= '{' '}' '[' ']' ',' ':'
     %expand ::= value
 """)
@@ -156,5 +203,5 @@ data = r"""
     ]
 }
 """
-print(parser.parse(lexer.parse(data)))
+print(jsonDSL.parse(data))
 ```
