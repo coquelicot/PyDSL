@@ -114,12 +114,17 @@ def makeLexer(config):
     return Lexer.Lexer(keys + regexs, ignore=ignore)
 
 def makeParser(config, start=None):
+    tokens = _parserLexer.parse(config)
+    tree = _parserParser.parse(tokens)
+    return _makeParser(tree, start)
+
+def _makeParser(tree, start=None):
 
     expand = []
     rules = []
     extraConfig = {}
-
     prefix = "_parser_"
+
     def allocName():
         expand.append(prefix + str(len(expand)))
         return expand[-1]
@@ -164,8 +169,6 @@ def makeParser(config, start=None):
             getRule(node, lhs)
         return lhs
 
-    tokens = _parserLexer.parse(config)
-    tree = _parserParser.parse(tokens)
     for rule in tree.child:
         if rule.child[0].name == 'configType':
             objList = extraConfig.setdefault(rule.child[0].value[1:], [])
@@ -180,3 +183,65 @@ def makeParser(config, start=None):
 
     return Parser.Parser(start, rules, **extraConfig)
 
+class DSL:
+
+    def __init__(self, lexer, parser):
+        self.lexer = lexer
+        self.parser = parser
+
+    def parse(self, config):
+        return self.parser.parse(self.lexer.parse(config))
+
+_dslLexer = makeLexer(r"""#dsl
+    %keys ::= '$' '|' '::=' '(' ')' '*' '+' '?'
+    identifier ::= /[_a-zA-Z][_a-zA-Z0-9]*/
+    sqString ::= /'[^']*'/
+    dqString ::= /"[^"\\]*(\\.[^"\\]*)*"/
+    reString ::= /\/[^\/\\]*(\\.[^\/\\]*)*\//
+    configType ::= /%(ignore|expandSingle|expand)/
+    comment ::= /#[^\n]*\n/
+    %ignore ::= comment
+""")
+_dslParser = makeParser(r"""#dsl
+    DSLRules ::= rule*
+    rule ::= identifier '::=' reString # define RE
+           | identifier '::=' alternate ('|' alternate)*
+           | configType '::=' simpleItem+
+    alternate ::= '$' | rhsItem+
+    rhsItem ::= itemValue ('?' | '+' | '*')?
+    itemValue ::= simpleItem | '(' alternate ('|' alternate)* ')'
+    simpleItem ::= identifier | dqString | sqString
+    %ignore ::= '::=' '|' '$' '(' ')'
+    %expand ::= simpleItem
+""")
+
+def makeDSL(config):
+
+    tokens = _dslLexer.parse(config)
+    tree = _dslParser.parse(tokens)
+
+    keySet = set()
+    def getKeys(ast):
+        if isinstance(ast, Lexer.Token):
+            if ast.name == 'sqString':
+                keySet.add(ast.value[1:-1])
+            elif ast.name == 'dqString':
+                keySet.add(escape(ast.value))
+        else:
+            for child in ast.child:
+                getKeys(child)
+    getKeys(tree)
+    keys = [Lexer.Rule(key, key, isRegex=False) for key in keySet]
+
+    nchild = []
+    regexs = []
+    for rule in tree.child:
+        if rule.child[1].name == 'reString':
+            regexs.append(Lexer.Rule(rule.child[0].value, rule.child[1].value[1:-1], isRegex=True))
+        else:
+            nchild.append(rule)
+    tree.child = nchild
+
+    lexer = Lexer.Lexer(list(keys) + regexs)
+    parser = _makeParser(tree)
+    return DSL(lexer, parser)
