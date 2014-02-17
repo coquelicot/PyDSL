@@ -5,7 +5,7 @@ from DSL import _lexerParser, _lexerLexer
 from DSL import _parserLexer, _parserParser
 from DSL import makeParser, makeLexer
 
-lexerLexerConfig = r"""
+lexerLexerConfig = r"""#dsl
     %keys ::= '%ignore' '%keys' '::='
     comment ::= /#[^\n]*\n/
     identifier ::= /[_a-zA-Z][_a-zA-Z0-9]*/
@@ -16,7 +16,7 @@ lexerLexerConfig = r"""
 """
 lexerLexer = makeLexer(lexerLexerConfig)
 
-lexerParserConfig = r"""
+lexerParserConfig = r"""#dsl
     LexRules ::= rule*
     rule ::= identifier '::=' (sqString | dqString | reString)
            | '%keys' '::=' (sqString | dqString)+
@@ -25,7 +25,7 @@ lexerParserConfig = r"""
 """
 lexerParser = makeParser(lexerParserConfig)
 
-parserLexerConfig = r"""
+parserLexerConfig = r"""#dsl
     %keys ::= '$' '|' '::=' '(' ')' '*' '+' '?'
     identifier ::= /[_a-zA-Z][_a-zA-Z0-9]*/
     configType ::= /%(ignore|expandSingle|expand)/
@@ -36,7 +36,7 @@ parserLexerConfig = r"""
 """
 parserLexer = makeLexer(parserLexerConfig)
 
-parserParserConfig = r"""
+parserParserConfig = r"""#dsl
     ParseRules ::= rule*
     rule ::= identifier '::=' alternate ('|' alternate)*
            | configType '::=' simpleItem+
