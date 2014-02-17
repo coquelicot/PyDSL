@@ -6,7 +6,7 @@ A runtime DSL parser generator for python.
 
 * Define Tokens.
 ```python
-lexRules = r"""
+lexRules = r"""#dsl
     identifier ::= /[_a-zA-Z][_a-zA-Z0-9]+/
     number ::= /[0-9]+(\.[0-9]+)?/
     operator ::= /[\+\-\*\/]/
@@ -14,7 +14,7 @@ lexRules = r"""
 ```
 * Define Rules.
 ```python
-parseRules = r"""
+parseRules = r"""#dsl
     expression ::= operand (operator operand)*
     operand ::= identifier | number
     %expand ::= operand
@@ -85,13 +85,13 @@ A simple calculator.
 import DSL
 import functools
 
-lexer = DSL.makeLexer(r"""
+lexer = DSL.makeLexer(r"""#dsl
     # It's okay to put comment here
     %keys ::= '+' '*' '(' ')'
     # Be careful!! backslash will be escaped!!
     number ::= /[0-9]+(\.[0-9]+)?/
 """)
-parser = DSL.makeParser(r"""
+parser = DSL.makeParser(r"""#dsl
     # You may use brace, *, +, ? just like regex.
     exprAdd ::= exprMul ('+' exprMul)*
     exprMul ::= term ('*' term)*
@@ -124,12 +124,12 @@ Json-like parser.
 ```python
 import DSL
 
-lexer = DSL.makeLexer(r"""
+lexer = DSL.makeLexer(r"""#dsl
     %keys ::= '{' '}' '[' ']' ':' ',' 'true' 'false' 'null'
     string ::= /"[^"\\]*(\\.[^"\\]*)*"/
     number ::= /[0-9]+(\.[0-9])?/
 """)
-parser = DSL.makeParser(r"""
+parser = DSL.makeParser(r"""#dsl
     object ::= '{' (kvPair (',' kvPair)*)? '}' # Nested brace!!
     kvPair ::= string ':' value
     array ::= '[' (value (',' value)*)? ']'
