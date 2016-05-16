@@ -181,6 +181,10 @@ def _makeParser(tree, start=None):
             getRules(rule.child[1:], lhs)
     extraConfig.setdefault('expand', []).extend(expand)
 
+    try:
+        return Parser.LR1Parser(start, rules, **extraConfig)
+    except:
+        print("Can't build LR1 parser, fallback")
     return Parser.Parser(start, rules, **extraConfig)
 
 class DSL:
