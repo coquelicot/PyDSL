@@ -302,7 +302,7 @@ class LR1Parser:
                 chds.append(stack.pop())
             assert rule.lhs in self.edges[stack[-1]]
             obj = self.edges[stack[-1]][rule.lhs]
-            stack.append(Node(rule.lhs, chds))
+            stack.append(Node(rule.lhs, reversed(chds)))
             stack.append(obj)
 
         for tok in tokens:
