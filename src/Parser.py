@@ -41,6 +41,51 @@ class Node:
 
 class Parser:
 
+    INIT_SYM = "$"
+
+    def __init__(self, start, rules, ignore=[], expand=[], expandSingle=[]):
+
+        self.start = start
+        self.ignore = ignore
+        self.expand = expand
+        self.expandSingle = expandSingle
+        self.orgiRules = rules
+
+        self.initRule = Rule(Parser.INIT_SYM, [start])
+
+        self.rules = {}
+        for rule in self.orgiRules:
+            if rule.lhs not in self.rules:
+                self.rules[rule.lhs] = []
+            self.rules[rule.lhs].append(rule)
+
+    def __repr__(self):
+        return "{0}({1}, {2}, {3}, {4}, {5})".format(
+            self.__class__.__qualname__,
+            repr(self.start),
+            repr(self.orgiRules),
+            repr(self.ignore),
+            repr(self.expand),
+            repr(self.expandSingle))
+
+    def flatten(self, node):
+        if node.name in self.ignore:
+            return []
+
+        nchild = []
+        for ch in node.child:
+            if isinstance(ch, Node):
+                nchild.extend(self.flatten(ch))
+            elif ch.name not in self.ignore:
+                nchild.append(ch)
+        if node.name in self.expand or (node.name in self.expandSingle and len(nchild) == 1):
+            return nchild
+        else:
+            node.child = nchild
+            return [node]
+
+class EarleyParser(Parser):
+
     class State:
 
         def __init__(self, rule, pos=0, orgi=0, node=None):
@@ -56,7 +101,7 @@ class Parser:
             return self.pos == len(self.rule.rhs)
 
         def advanced(self, nch):
-            return Parser.State(self.rule, self.pos + 1, self.orgi, self.node.extended(nch))
+            return EarleyParser.State(self.rule, self.pos + 1, self.orgi, self.node.extended(nch))
 
         def __str__(self):
             return "(" + str(self.rule) + ":" + str(self.pos) + ":" + str(self.orgi) + ")"
@@ -67,35 +112,11 @@ class Parser:
         def __hash__(self):
             return hash((self.rule, self.pos, self.orgi))
 
-
-    INIT_SYM = "$"
-
-    def __init__(self, start, rules, ignore=[], expand=[], expandSingle=[]):
-
-        self.start = start
-        self.ignore = ignore
-        self.expand = expand
-        self.expandSingle = expandSingle
-        self.orgiRules = rules
-
+    def __init__(self, *args, **kargs):
+        super().__init__(*args, **kargs)
         self.chart = None
         self.mchart = None
-        self.initRule = Rule(Parser.INIT_SYM, [start])
         self.initState = self.State(self.initRule)
-        self.rules = {}
-        for rule in self.orgiRules:
-            if rule.lhs not in self.rules:
-                self.rules[rule.lhs] = []
-            self.rules[rule.lhs].append(rule)
-
-    def __repr__(self):
-        return "{0}({1}, {2}, {3}, {4}, {5})".format(
-            self.__class__.__qualname__,
-            repr(self.start),
-            repr(self.orgiRules),
-            repr(self.ignore),
-            repr(self.expand),
-            repr(self.expandSingle))
 
     def parse(self, tokens):
 
@@ -135,23 +156,7 @@ class Parser:
             self.chart[pos].append(state)
             self.mchart[pos][state.nextRHS()].add(state)
 
-    def flatten(self, node):
-        if node.name in self.ignore:
-            return []
-
-        nchild = []
-        for ch in node.child:
-            if isinstance(ch, Node):
-                nchild.extend(self.flatten(ch))
-            elif ch.name not in self.ignore:
-                nchild.append(ch)
-        if node.name in self.expand or (node.name in self.expandSingle and len(nchild) == 1):
-            return nchild
-        else:
-            node.child = nchild
-            return [node]
-
-class LR1Parser:
+class LR1Parser(Parser):
 
     class Item:
 
@@ -181,25 +186,9 @@ class LR1Parser:
         def __repr__(self):
             return str(self)
 
-
-    INIT_SYM = "$"
-
-    def __init__(self, start, rules, ignore=[], expand=[], expandSingle=[]):
-
-        self.start = start
-        self.ignore = ignore
-        self.expand = expand
-        self.expandSingle = expandSingle
-        self.orgiRules = rules
-
-        self.initRule = Rule(LR1Parser.INIT_SYM, [start])
+    def __init__(self, *args, **kargs):
+        super().__init__(*args, **kargs)
         self.initItem = self.Item(self.initRule)
-        self.rules = {}
-        for rule in self.orgiRules:
-            if rule.lhs not in self.rules:
-                self.rules[rule.lhs] = []
-            self.rules[rule.lhs].append(rule)
-
         self.build_first()
         self.build()
 
@@ -325,19 +314,3 @@ class LR1Parser:
             else:
                 reduceBy(None)
         raise RuntimeError("Can't parse token stream.")
-
-    def flatten(self, node):
-        if node.name in self.ignore:
-            return []
-
-        nchild = []
-        for ch in node.child:
-            if isinstance(ch, Node):
-                nchild.extend(self.flatten(ch))
-            elif ch.name not in self.ignore:
-                nchild.append(ch)
-        if node.name in self.expand or (node.name in self.expandSingle and len(nchild) == 1):
-            return nchild
-        else:
-            node.child = nchild
-            return [node]

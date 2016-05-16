@@ -11,7 +11,7 @@ _lexerLexer = Lexer.Lexer([
     Lexer.Rule("dqString", "\"[^\"\\\\]*(\\\\.[^\"\\\\]*)*\""),
     Lexer.Rule("reString", "/[^/\\\\]*(\\\\.[^/\\\\]*)*/"),
 ], ignore=["comment"])
-_lexerParser = Parser.Parser("LexRules", [
+_lexerParser = Parser.EarleyParser("LexRules", [
     Parser.Rule("LexRules", ["rules"]),
     Parser.Rule("rules", []),
     Parser.Rule("rules", ["rule", "rules"]),
@@ -46,7 +46,7 @@ _parserLexer = Lexer.Lexer([
     Lexer.Rule("dqString", "\"[^\"\\\\]*(\\\\.[^\"\\\\]*)*\""),
     Lexer.Rule("comment", "#[^\n]*\n"),
 ], ignore=["comment"])
-_parserParser = Parser.Parser('ParseRules', [
+_parserParser = Parser.EarleyParser('ParseRules', [
     Parser.Rule('ParseRules', ['rules']),
     Parser.Rule('rules', []),
     Parser.Rule('rules', ['rule', 'rules']),
@@ -185,7 +185,7 @@ def _makeParser(tree, start=None):
         return Parser.LR1Parser(start, rules, **extraConfig)
     except:
         print("Can't build LR1 parser, fallback")
-    return Parser.Parser(start, rules, **extraConfig)
+    return Parser.EarleyParser(start, rules, **extraConfig)
 
 class DSL:
 
