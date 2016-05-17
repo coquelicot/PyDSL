@@ -242,7 +242,7 @@ def makeDSL(config):
     regexs = []
     for rule in tree.child:
         if rule.child[1].name == 'reString':
-            regexs.append(Lexer.Rule(rule.child[0].value, rule.child[1].value[1:-1], isRegex=True))
+            regexs.append(Lexer.Rule(rule.child[0].value, escape(rule.child[1].value), isRegex=True))
         else:
             nchild.append(rule)
     tree.child = nchild
