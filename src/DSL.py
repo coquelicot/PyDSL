@@ -28,6 +28,7 @@ _lexerParser = Parser.EarleyParser("LexRules", [
     Parser.Rule("elements", ["element", "elements"]),
     Parser.Rule("element", ["identifier"]),
     Parser.Rule("element", ["sqString"]),
+    Parser.Rule("element", ["dqString"]),
 ], expand=["rules", "keys", "key", "element", "elements"], ignore=["::="])
 
 _parserLexer = Lexer.Lexer([
@@ -102,8 +103,10 @@ def makeLexer(config):
             for token in rule.child[1:]:
                 if token.name == 'identifier':
                     ignore.append(token.value)
-                else:
+                elif token.name == 'dqString':
                     ignore.append(escape(token.value))
+                else:
+                    ignore.append(token.value[1:-1])
         else:
             name = rule.child[0].value
             if rule.child[1].name in ['dqString', 'reString']:
