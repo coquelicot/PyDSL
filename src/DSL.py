@@ -8,8 +8,8 @@ _lexerLexer = Lexer.Lexer([
     Lexer.Rule("comment", "#[^\n]*\n"),
     Lexer.Rule("identifier", "[_a-zA-Z][_a-zA-Z0-9]*"),
     Lexer.Rule("sqString", "'[^']*'"),
-    Lexer.Rule("dqString", "\"[^\"\\\\]*(\\\\.[^\"\\\\]*)*\""),
-    Lexer.Rule("reString", "/[^/\\\\]*(\\\\.[^/\\\\]*)*/"),
+    Lexer.Rule("dqString", "\"[^\"\\]*(\\\\.[^\"\\]*)*\""),
+    Lexer.Rule("reString", "/[^/\\]*(\\\\.[^/\\]*)*/"),
 ], ignore=["comment"])
 _lexerParser = Parser.EarleyParser("LexRules", [
     Parser.Rule("LexRules", ["rules"]),
@@ -43,7 +43,7 @@ _parserLexer = Lexer.Lexer([
     Lexer.Rule("configType", "%(ignore|expandSingle|expand)"),
     Lexer.Rule("identifier", "[_a-zA-Z][_a-zA-Z0-9]*"),
     Lexer.Rule("sqString", "'[^']*'"),
-    Lexer.Rule("dqString", "\"[^\"\\\\]*(\\\\.[^\"\\\\]*)*\""),
+    Lexer.Rule("dqString", "\"[^\"\\]*(\\.[^\"\\]*)*\""),
     Lexer.Rule("comment", "#[^\n]*\n"),
 ], ignore=["comment"])
 _parserParser = Parser.EarleyParser('ParseRules', [
@@ -72,11 +72,12 @@ _parserParser = Parser.EarleyParser('ParseRules', [
     Parser.Rule('simpleItem', ['sqString'])
 ], expand=['rules', 'rhsItems', 'alternates', 'decorator', 'simpleItem', 'simpleItems'], ignore=['::=', '|', '$', '(', ')'])
 
+NATIVE_ESCAPE = { "a": "\a", "b": "\b", "f": "\f", "n": "\n", "r": "\r", "t": "\t", "v": "\v", }
 def escape(string):
     ret, inEscape = "", False
     for ch in string[1:-1]:
         if inEscape:
-            ret += Lexer.getEscapedChar(ch)
+            ret += NATIVE_ESCAPE.get(ch, ch)
             inEscape = False
         elif ch != "\\":
             ret += ch
@@ -105,13 +106,13 @@ def makeLexer(config):
                     ignore.append(escape(token.value))
         else:
             name = rule.child[0].value
-            if rule.child[1].name == 'dqString':
+            if rule.child[1].name in ['dqString', 'reString']:
                 value = escape(rule.child[1].value)
-            elif rule.child[1].name in ['sqString', 'reString']:
+            elif rule.child[1].name in ['sqString']:
                 value = rule.child[1].value[1:-1]
             isRegex = rule.child[1].name == 'reString'
             regexs.append(Lexer.Rule(name, value, isRegex=isRegex))
-    return Lexer.Lexer(keys + regexs, ignore=ignore)
+    return Lexer.Lexer(regexs + keys, ignore=ignore)
 
 def makeParser(config, start=None):
     tokens = _parserLexer.parse(config)
@@ -200,8 +201,8 @@ _dslLexer = makeLexer(r"""#dsl
     %keys ::= '$' '|' '::=' '(' ')' '*' '+' '?'
     identifier ::= /[_a-zA-Z][_a-zA-Z0-9]*/
     sqString ::= /'[^']*'/
-    dqString ::= /"[^"\\]*(\\.[^"\\]*)*"/
-    reString ::= /\/[^\/\\]*(\\.[^\/\\]*)*\//
+    dqString ::= /"[^"\\]*(\\\\.[^"\\]*)*"/
+    reString ::= /\/[^\/\\]*(\\\\.[^\/\\]*)*\//
     configType ::= /%(ignore|expandSingle|expand)/
     comment ::= /#[^\n]*\n/
     %ignore ::= comment
@@ -246,6 +247,6 @@ def makeDSL(config):
             nchild.append(rule)
     tree.child = nchild
 
-    lexer = Lexer.Lexer(list(keys) + regexs)
+    lexer = Lexer.Lexer(regexs + list(keys))
     parser = _makeParser(tree)
     return DSL(lexer, parser)
