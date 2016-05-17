@@ -6,15 +6,15 @@ A runtime DSL parser generator for python.
 
 * Define Tokens.
 ```python
-lexRules = r"""#dsl
-    identifier ::= /[_a-zA-Z][_a-zA-Z0-9]+/
-    number ::= /[0-9]+(\.[0-9]+)?/
-    operator ::= /[\+\-\*\/]/
+lexRule = r"""#dsl
+    identifier ::= /[_a-zA-Z][_a-zA-Z0-9]*/
+    number ::= /[0-9]+(\\.[0-9]+)?/
+    operator ::= /[+*\/-]/
 """
 ```
 * Define Rules.
 ```python
-parseRules = r"""#dsl
+parseRule = r"""#dsl
     expression ::= operand (operator operand)*
     operand ::= identifier | number
     %expand ::= operand
@@ -23,8 +23,8 @@ parseRules = r"""#dsl
 * Create Lexer and Parser
 ```python
 import DSL
-lexer = DSL.makeLexer(lexRules)
-parser = DSL.makeParser(parseRules)
+lexer = DSL.makeLexer(lexRule)
+parser = DSL.makeParser(parseRule)
 ```
 * Use it!!
 ```python
@@ -41,13 +41,13 @@ In many cases, you can use `makeDSL` instead of `makeLexer` and `makeParser`.
 ```python
 import DSL
 dsl = DSL.makeDSL(r"""#dsl
-    identifier ::= /[_a-zA-Z][_a-zA-Z0-9]+/
-    number ::= /[0-9]+(\.[0-9]+)?/
-    operator ::= /[\+\-\*\/]/
+    identifier ::= /[_a-zA-Z][_a-zA-Z0-9]*/
+    number ::= /[0-9]+(\\.[0-9]+)?/
+    operator ::= /[+*\/-]/
     expression ::= operand (operator operand)*
     operand ::= identifier | number
     %expand ::= operand
-"""
+""")
 #parser.parse(lexer.parse(data))
 dsl.parse(data)
 ```
@@ -60,8 +60,8 @@ dsl.parse(data)
 comment ::= /#[^\n]*\n/
 identifier ::= /[_a-zA-Z][_a-zA-Z0-9]*/
 sqString ::= /'[^']*'/
-dqString ::= /"[^"\\]*(\\.[^"\\]*)*"/
-reString ::= /\/[^\/\\]*(\\.[^\/\\]*)*\//
+dqString ::= /"[^"\\]*(\\\\.[^"\\]*)*"/
+reString ::= /\/[^\/\\]*(\\\\.[^\/\\]*)*\//
 %ignore ::= comment
 ```
 * Lexer DSL's parser in Parser DSL
@@ -79,7 +79,7 @@ rule ::= identifier '::=' (sqString | dqString | reString)
 identifier ::= /[_a-zA-Z][_a-zA-Z0-9]*/
 configType ::= /%(ignore|expandSingle|expand)/
 sqString ::= /'[^']*'/
-dqString ::= /"[^"\\]*(\\.[^"\\]*)*"/
+dqString ::= /"[^"\\]*(\\\\.[^"\\]*)*"/
 comment ::= /#[^\n]*\n/
 %ignore ::= comment
 ```
@@ -100,8 +100,8 @@ simpleItem ::= identifier | dqString | sqString
 %keys ::= '$' '|' '::=' '(' ')' '*' '+' '?'
 identifier ::= /[_a-zA-Z][_a-zA-Z0-9]*/
 sqString ::= /'[^']*'/
-dqString ::= /"[^"\\]*(\\.[^"\\]*)*"/
-reString ::= /\/[^\/\\]*(\\.[^\/\\]*)*\//
+dqString ::= /"[^"\\]*(\\\\.[^"\\]*)*"/
+reString ::= /\/[^\/\\]*(\\\\.[^\/\\]*)*\//
 configType ::= /%(ignore|expandSingle|expand)/
 comment ::= /#[^\n]*\n/
 %ignore ::= comment
@@ -130,9 +130,23 @@ import functools
 lexer = DSL.makeLexer(r"""#dsl
     # It's okay to put comment here
     %keys ::= '+' '*' '(' ')'
-    # Be careful!! backslash will be escaped!!
-    number ::= /[0-9]+(\.[0-9]+)?/
-    comment ::= /\/\*[^\*]*(\*+[^\*\/][^\*]*)*\*+\//
+    # Be careful!! backslash will be escaped twice!!
+    # (and thrice if you're not using raw string)
+    # what makeLexer get is
+    #  /[0-9]+(\\\\.[0-9]+)?/
+    # what it pass to regex recognizer is (escape 1)
+    #  [0-9]+(\\.[0-9]+)?
+    # the regex recognizer will regard it as (escape 2)
+    #  mutiple(digit) one_or_no(backslash anychar multiple(digit))
+    number ::= /[0-9]+(\\.[0-9]+)?/
+    # makeLexer get
+    #  /\/\\*[^\\*]*(\\*+[^*\/][^*]*)*\\*+\//
+    # regex get
+    #  /\*[^\*]*(\*+[^*/][^*]*)*\*+/
+    # note that there's no escape in character set [ ]
+    # so, the backslash in [^\*] won't be interpret as escape
+    # what it means is "anything but star or backslash"
+    comment ::= /\/\\*[^\\*]*(\\*+[^*\/][^*]*)*\\*+\//
     # Remove comment from token stream.
     %ignore ::= comment
 """)
@@ -173,8 +187,17 @@ Json-like parser.
 import DSL
 
 jsonDSL = DSL.makeDSL(r"""#dsl
-    string ::= /"[^"\\]*(\\.[^"\\]*)*"/
-    number ::= /[0-9]+(\.[0-9])?/
+    # Remember, it will be escaped twice
+    # makeDSL get
+    #  /"[^"\\]*(\\\\.[^"\\]*)*"/
+    # regex get
+    #  "[^"\]*(\\.[^"\]*)*"
+    # blackslash will be interpret as escape as long as it's not in []
+    # hence, the double blackslash will be interpret as "a blackslash"
+    # the meaning of the regex will be
+    # " many_or_no(except " \) many_or_no(blackslash anychar many_or_no(except " \)) "
+    string ::= /"[^"\\]*(\\\\.[^"\\]*)*"/
+    number ::= /[0-9]+(\\.[0-9])?/
 
     object ::= '{' (kvPair (',' kvPair)*)? '}' # Nested brace!!
     kvPair ::= string ':' value
