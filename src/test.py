@@ -10,8 +10,8 @@ lexerLexerConfig = r"""#dsl
     comment ::= /#[^\n]*\n/
     identifier ::= /[_a-zA-Z][_a-zA-Z0-9]*/
     sqString ::= /'[^']*'/
-    dqString ::= /"[^"\\]*(\\.[^"\\]*)*"/
-    reString ::= /\/[^\/\\]*(\\.[^\/\\]*)*\//
+    dqString ::= /"[^"\\]*(\\\\.[^"\\]*)*"/
+    reString ::= /\/[^\/\\]*(\\\\.[^\/\\]*)*\//
     %ignore ::= comment
 """
 lexerLexer = makeLexer(lexerLexerConfig)
@@ -30,7 +30,7 @@ parserLexerConfig = r"""#dsl
     identifier ::= /[_a-zA-Z][_a-zA-Z0-9]*/
     configType ::= /%(ignore|expandSingle|expand)/
     sqString ::= /'[^']*'/
-    dqString ::= /"[^"\\]*(\\.[^"\\]*)*"/
+    dqString ::= /"[^"\\]*(\\\\.[^"\\]*)*"/
     comment ::= /#[^\n]*\n/
     %ignore ::= comment
 """
